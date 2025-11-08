@@ -1,20 +1,23 @@
 import { useState, useEffect, ReactNode } from 'react';
-import bridge from '@vkontakte/vk-bridge';
+import bridge, { UserInfo } from '@vkontakte/vk-bridge';
 import { View, SplitLayout, SplitCol, ScreenSpinner } from '@vkontakte/vkui';
 
 import { Persik, Home } from './panels';
 
 const App = () => {
   const [activePanel, setActivePanel] = useState('home');
+  const [fetchedUser, setUser] = useState<UserInfo | undefined>();
   const [popout, setPopout] = useState<ReactNode | null>(<ScreenSpinner />);
 
   useEffect(() => {
     async function initApp() {
       try {
         await bridge.send('VKWebAppInit');
+        const user = await bridge.send('VKWebAppGetUserInfo');
+        setUser(user);
         setPopout(null);
       } catch (error) {
-        console.error('Failed to initialize VK app:', error);
+        console.error('Failed to initialize:', error);
         setPopout(null);
       }
     }
@@ -29,8 +32,15 @@ const App = () => {
     <SplitLayout popout={popout}>
       <SplitCol>
         <View activePanel={activePanel}>
-          <Home id="home" onNavigate={handleNavigation} />
-          <Persik id="persik" onNavigate={handleNavigation} />
+          <Home 
+            id="home" 
+            fetchedUser={fetchedUser}
+            onNavigate={handleNavigation} 
+          />
+          <Persik 
+            id="persik" 
+            onNavigate={handleNavigation}
+          />
         </View>
       </SplitCol>
     </SplitLayout>
