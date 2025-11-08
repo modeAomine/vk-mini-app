@@ -51,9 +51,9 @@ const VKAuth: React.FC = () => {
                 {user.first_name} {user.last_name}
               </Title>
               <Text>ID: {user.vk_id}</Text>
-              {user.is_admin && (
+              {/* {user.is_admin && (
                 <Text style={{ color: 'var(--accent)' }}>Администратор</Text>
-              )}
+              )} */}
             </div>
           </div>
           <Button 

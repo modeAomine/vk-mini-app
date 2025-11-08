@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { User, VKUserData, apiService } from '../utils/api';
+import { User, VKUserData } from '../types'; // Импортируем из types
+import { apiService } from '../utils/api'; // Только apiService из utils/api
 import bridge from '@vkontakte/vk-bridge';
 
 export const useUser = () => {
@@ -59,7 +60,6 @@ export const useUser = () => {
   // Выход
   const logout = () => {
     setUser(null);
-    // Можно добавить очистку токенов и т.д.
   };
 
   return {

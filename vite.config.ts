@@ -9,38 +9,47 @@ function handleModuleDirectivesPlugin() {
       if (id.includes('@vkontakte/icons')) {
         code = code.replace(/"use-client";?/g, '');
       }
-      return { code };
+      return { code, map: null };
     },
   };
 }
 
 export default defineConfig({
-  base: './', // Оставляем так для GitHub Pages
+  base: './',
   
   plugins: [
     react(),
     handleModuleDirectivesPlugin(),
     legacy({
       targets: ['defaults', 'not IE 11'],
+      modernPolyfills: true,
     }),
   ],
 
   build: {
     outDir: 'build',
-    // Добавляем настройки для правильной работы MIME типов
     assetsDir: 'assets',
     rollupOptions: {
       output: {
-        chunkFileNames: 'assets/[name]-[hash].js',
-        entryFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
+        // Убираем хэши для тестирования
+        chunkFileNames: 'assets/[name].js',
+        entryFileNames: 'assets/[name].js', 
+        assetFileNames: 'assets/[name].[ext]'
       }
-    }
+    },
+    // Добавляем sourcemaps для отладки
+    sourcemap: true,
   },
 
-  // Добавляем сервер для разработки
   server: {
     port: 3000,
     host: true
-  }
+  },
+
+  // Явно указываем типы модулей
+  esbuild: {
+    supported: {
+      'top-level-await': true
+    },
+  },
 });

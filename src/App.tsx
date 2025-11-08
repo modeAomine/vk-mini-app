@@ -1,42 +1,67 @@
-import { useState, useEffect, ReactNode } from 'react';
-import bridge, { UserInfo } from '@vkontakte/vk-bridge';
-import { View, SplitLayout, SplitCol, ScreenSpinner } from '@vkontakte/vkui';
+import React, { useEffect, useState } from 'react';
+import bridge from '@vkontakte/vk-bridge';
+import { View, Panel, ScreenSpinner } from '@vkontakte/vkui';
+import { MainMenu } from './screens/MainMenu';
+import { ProfileScreen } from './screens/ProfileScreen';
+import { useAuth } from './hooks/useAuth';
+import { NavigationProps } from './types';
 
-import Home from './panels/Home';
+type NavigationComponent = React.FC<NavigationProps>;
 
-const App = () => {
-  const [fetchedUser, setUser] = useState<UserInfo | undefined>();
-  const [popout, setPopout] = useState<ReactNode | null>(<ScreenSpinner />);
+const App: React.FC = () => {
+  const { loading, login } = useAuth();
+  const [activePanel, setActivePanel] = useState<string>('main');
+  const [CurrentComponent, setCurrentComponent] = useState<NavigationComponent | null>(null);
 
   useEffect(() => {
-    async function initApp() {
+    const initApp = async () => {
       try {
-        // Инициализируем VK Mini App
         await bridge.send('VKWebAppInit');
-        console.log('✅ VK Mini App initialized');
-        
-        // Получаем данные пользователя
-        const user = await bridge.send('VKWebAppGetUserInfo');
-        console.log('✅ User data loaded:', user);
-        setUser(user);
-        
-        setPopout(null);
+        await login();
       } catch (error) {
-        console.error('❌ Failed to initialize:', error);
-        setPopout(null);
+        console.error('App initialization failed:', error);
       }
-    }
+    };
+
     initApp();
-  }, []);
+  }, [login]);
+
+  const handleNavigation: NavigationProps['onNavigate'] = (componentOrPanel) => {
+    if (typeof componentOrPanel === 'string') {
+      setActivePanel(componentOrPanel);
+      setCurrentComponent(null);
+    } else {
+      setActivePanel('dynamic');
+      setCurrentComponent(() => componentOrPanel);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View activePanel="loading">
+        <Panel id="loading">
+          <ScreenSpinner />
+        </Panel>
+      </View>
+    );
+  }
 
   return (
-    <SplitLayout popout={popout}>
-      <SplitCol>
-        <View activePanel="home">
-          <Home id="home" fetchedUser={fetchedUser} />
-        </View>
-      </SplitCol>
-    </SplitLayout>
+    <View activePanel={activePanel}>
+      <Panel id="main">
+        <MainMenu onNavigate={handleNavigation} />
+      </Panel>
+      
+      {/* Статические экраны */}
+      <Panel id="profile">
+        <ProfileScreen onNavigate={handleNavigation} />
+      </Panel>
+      
+      {/* Динамический экран для компонентов */}
+      <Panel id="dynamic">
+        {CurrentComponent && <CurrentComponent onNavigate={handleNavigation} />}
+      </Panel>
+    </View>
   );
 };
 

@@ -1,11 +1,12 @@
+import React from 'react';
 import { Avatar, Title, Text, Div } from '@vkontakte/vkui';
-import { UserInfo } from '@vkontakte/vk-bridge';
+import { User } from '../types'; // Используем наш тип User
 
 interface UserProfileProps {
-  user: UserInfo;
+  user: User; // Меняем UserInfo на наш User
 }
 
-export const UserProfile = ({ user }: UserProfileProps) => {
+export const UserProfile: React.FC<UserProfileProps> = ({ user }) => {
   return (
     <Div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
