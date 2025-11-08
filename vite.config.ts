@@ -15,8 +15,7 @@ function handleModuleDirectivesPlugin() {
 }
 
 export default defineConfig({
-  // Меняем base для GitHub Pages
-  base: '/vk-mini-app/', // ЗАМЕНИТЕ на имя вашего репозитория
+  base: './', // Оставляем так для GitHub Pages
   
   plugins: [
     react(),
@@ -27,6 +26,21 @@ export default defineConfig({
   ],
 
   build: {
-    outDir: 'build', // Оставляем как в VK конфиге
+    outDir: 'build',
+    // Добавляем настройки для правильной работы MIME типов
+    assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
+      }
+    }
   },
+
+  // Добавляем сервер для разработки
+  server: {
+    port: 3000,
+    host: true
+  }
 });
