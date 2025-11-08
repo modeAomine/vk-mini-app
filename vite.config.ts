@@ -14,16 +14,10 @@ function handleModuleDirectivesPlugin() {
   };
 }
 
-/**
- * Some chunks may be large.
- * This will not affect the loading speed of the site.
- * We collect several versions of scripts that are applied depending on the browser version.
- * This is done so that your code runs equally well on the site and in the odr.
- * The details are here: https://dev.vk.com/mini-apps/development/on-demand-resources.
- */
 export default defineConfig({
-  base: './',
-
+  // Меняем base для GitHub Pages
+  base: '/vk-mini-app/', // ЗАМЕНИТЕ на имя вашего репозитория
+  
   plugins: [
     react(),
     handleModuleDirectivesPlugin(),
@@ -33,6 +27,6 @@ export default defineConfig({
   ],
 
   build: {
-    outDir: 'build',
+    outDir: 'build', // Оставляем как в VK конфиге
   },
 });

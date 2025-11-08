@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  vk-mini-app:
+    image: your-username/vk-mini-app:latest
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    labels:
+      - "autoheal=true"
+
+  auto-deploy:
+    image: your-username/vk-mini-app:latest
+    build: .
+    command: >
+      sh -c "
+      git clone https://github.com/modeAomine/vk-mini-app /tmp/app &&
+      cd /tmp/app &&
+      while true; do
+        git fetch origin &&
+        LOCAL=$(git rev-parse HEAD) &&
+        REMOTE=$(git rev-parse origin/main) &&
+        if [ $$LOCAL != $$REMOTE ]; then
+          echo 'New changes detected, updating...' &&
+          git pull origin main &&
+          docker-compose -f docker-compose.prod.yml pull vk-mini-app &&
+          docker-compose -f docker-compose.prod.yml up -d vk-mini-app
+        fi &&
+        sleep 30
+      done"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - GIT_TERMINAL_PROMPT=0
