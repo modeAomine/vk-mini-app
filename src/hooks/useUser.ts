@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { User, VKUserData } from '../types'; // Импортируем из types
-import { apiService } from '../utils/api'; // Только apiService из utils/api
+import { User } from '../types';
+import { apiService } from '../utils/api';
 import bridge from '@vkontakte/vk-bridge';
 
 export const useUser = () => {
@@ -16,24 +16,27 @@ export const useUser = () => {
 
       // Получаем данные пользователя из VK
       const vkUser = await bridge.send('VKWebAppGetUserInfo');
-      const tokenData = await bridge.send('VKWebAppGetAuthToken', {
-        app_id: parseInt(import.meta.env.VITE_VK_APP_ID),
-        scope: 'friends,photos'
-      });
 
-      const vkUserData: VKUserData = {
-        id: vkUser.id,
+      // Подготавливаем данные для отправки на сервер
+      const userData = {
+        vk_id: vkUser.id,
         first_name: vkUser.first_name,
         last_name: vkUser.last_name,
-        photo_100: vkUser.photo_100,
-        photo_200: vkUser.photo_200,
-        access_token: tokenData.access_token
+        photo_100: vkUser.photo_100 || undefined,
+        photo_200: vkUser.photo_200 || undefined,
       };
 
-      // Отправляем на бэкенд
-      const userData = await apiService.authUser(vkUserData);
-      setUser(userData);
-      return userData;
+      // Отправляем на бэкенд - используем saveUser вместо authUser
+      const saveResult = await apiService.saveUser(userData);
+      
+      if (saveResult.success && saveResult.data) {
+        setUser(saveResult.data);
+        return saveResult.data;
+      } else {
+        const errorMessage = saveResult.error || 'Failed to save user';
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      }
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Auth failed';
@@ -44,22 +47,56 @@ export const useUser = () => {
     }
   };
 
-  // Получение пользователя
-  const fetchUser = async (vkId: number) => {
+  // Получение пользователя по VK ID
+  const fetchUser = async (vkId: number): Promise<void> => {
     try {
       setLoading(true);
-      const userData = await apiService.getUserByVkId(vkId);
-      setUser(userData);
+      setError(null);
+      
+      const userResult = await apiService.getUserByVkId(vkId);
+      
+      if (userResult.success && userResult.data) {
+        setUser(userResult.data);
+      } else {
+        const errorMessage = userResult.error || 'User not found';
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch user');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch user';
+      setError(errorMessage);
+      throw err;
     } finally {
       setLoading(false);
     }
   };
 
+  // Обновление телефона
+  const updatePhone = async (vkId: number, phone: string): Promise<boolean> => {
+    try {
+      setError(null);
+      
+      const updateResult = await apiService.updatePhone(vkId, phone);
+      
+      if (updateResult.success && updateResult.data) {
+        setUser(updateResult.data);
+        return true;
+      } else {
+        const errorMessage = updateResult.error || 'Failed to update phone';
+        setError(errorMessage);
+        return false;
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update phone';
+      setError(errorMessage);
+      return false;
+    }
+  };
+
   // Выход
-  const logout = () => {
+  const logout = (): void => {
     setUser(null);
+    setError(null);
   };
 
   return {
@@ -68,6 +105,7 @@ export const useUser = () => {
     error,
     authWithVK,
     fetchUser,
+    updatePhone,
     logout,
   };
 };
