@@ -1,79 +1,98 @@
-import { User, Address, ApiResponse, VKUserData } from '../types';
+import { User, Address, ApiResponse } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const VERCEL_BYPASS_SECRET = import.meta.env.VERCEL_AUTOMATION_BYPASS_SECRET || 'byesiOoq8uijFia6jOCY1nIoBbujcvEh';
 
-class ApiService {
+export class ApiService {
   private baseUrl: string;
+  private bypassSecret: string;
 
   constructor() {
     this.baseUrl = API_BASE_URL;
+    this.bypassSecret = VERCEL_BYPASS_SECRET;
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const response = await fetch(url, {
-      headers: {
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+    try {
+      const url = `${this.baseUrl}${endpoint}`;
+      
+      const headers = {
         'Content-Type': 'application/json',
+        'x-vercel-protection-bypass': this.bypassSecret, // ДОБАВЛЯЕМ ЗАГОЛОВОК
+        'x-vercel-set-bypass-cookie': 'true',
         ...options.headers,
-      },
-      ...options,
-    });
+      };
 
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      const response = await fetch(url, {
+        headers,
+        ...options,
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      console.error('API request failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+      };
     }
-
-    return response.json();
   }
 
-  // Аутентификация через VK
-  async authUser(vkUserData: VKUserData): Promise<User> {
-    return this.request('/api/users/save.ts', {
-      method: 'POST',
-      body: JSON.stringify(vkUserData),
-    });
-  }
-
-  // Получение пользователя по VK ID
-  async getUserByVkId(vkId: number): Promise<User> {
-    return this.request(`/api/vk/${vkId}`);
-  }
-
-  // Сохранение/обновление пользователя
-  async saveUser(userData: Partial<User>): Promise<ApiResponse<User>> {
-    return this.request('/users/save', {
+  // Сохранение/обновление пользователя при авторизации
+  async saveUser(userData: {
+    vk_id: number;
+    first_name: string;
+    last_name: string;
+    photo_100?: string;
+    photo_200?: string;
+  }): Promise<ApiResponse<User>> {
+    return this.request<User>('/users', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
   }
 
-  // Получение профиля пользователя
-  async getUserProfile(vkId: number): Promise<ApiResponse<User>> {
-    return this.request(`/users/profile/${vkId}`);
+  // Получение пользователя по VK ID
+  async getUserByVkId(vkId: number): Promise<ApiResponse<User>> {
+    return this.request<User>(`/users/vk/${vkId}`);
   }
 
   // Обновление телефона
   async updatePhone(vkId: number, phone: string): Promise<ApiResponse<User>> {
-    return this.request(`/users/${vkId}/phone`, {
-      method: 'PUT',
-      body: JSON.stringify({ phone }),
+    return this.request<User>(`/users/${vkId}/phone?phone=${encodeURIComponent(phone)}`, {
+      method: 'PATCH',
     });
   }
 
-  // Работа с адресами
+  // Получение адресов пользователя
   async getUserAddresses(userId: number): Promise<ApiResponse<Address[]>> {
-    return this.request(`/users/${userId}/addresses`);
+    return this.request<Address[]>(`/addresses/user/${userId}`);
   }
 
-  async addAddress(addressData: Omit<Address, 'id' | 'created_at'>): Promise<ApiResponse<Address>> {
-    return this.request('/addresses', {
+  // Добавление адреса
+  async addAddress(addressData: {
+    user_id: number;
+    title: string;
+    address_text: string;
+  }): Promise<ApiResponse<Address>> {
+    return this.request<Address>('/addresses', {
       method: 'POST',
       body: JSON.stringify(addressData),
     });
   }
 
+  // Удаление адреса
   async deleteAddress(addressId: number): Promise<ApiResponse<void>> {
-    return this.request(`/addresses/${addressId}`, {
+    return this.request<void>(`/addresses/${addressId}`, {
       method: 'DELETE',
     });
   }
